@@ -3,197 +3,402 @@
 <head>
     <meta charset="UTF-8">
     <title>PetMatch Chat - Test Client</title>
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
     <style>
-        body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
-        h1 { color: #333; }
-        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
-        label { display: inline-block; width: 80px; font-weight: bold; }
-        input[type="text"] { padding: 6px 10px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
-        button { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-size: 14px; }
-        #btnConnect { background: #28a745; }
-        #btnConnect:disabled { background: #999; }
-        #btnSubscribe { background: #007bff; }
-        #btnSubscribe:disabled { background: #999; }
-        #btnSend { background: #fd7e14; }
-        #btnSend:disabled { background: #999; }
-        #btnDisconnect { background: #dc3545; }
-        #status { padding: 8px; margin: 10px 0; border-radius: 4px; font-weight: bold; }
-        .connected { background: #d4edda; color: #155724; }
-        .disconnected { background: #f8d7da; color: #721c24; }
-        #messages { width: 100%; height: 300px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto; background: #f9f9f9; font-family: monospace; font-size: 13px; }
-        .msg { margin-bottom: 8px; padding: 6px; background: #fff; border-left: 3px solid #007bff; border-radius: 2px; }
-        .msg .time { color: #888; font-size: 11px; }
-        .msg .from { color: #28a745; font-weight: bold; }
-        .msg .to { color: #6c757d; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: white;
+        }
+
+        label {
+            display: inline-block;
+            width: 80px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            padding: 6px 10px;
+            width: 220px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        #btnConnect {
+            background: #28a745;
+        }
+
+        #btnDisconnect {
+            background: #dc3545;
+        }
+
+        #btnSubscribe {
+            background: #007bff;
+        }
+
+        #btnSend {
+            background: #fd7e14;
+        }
+
+        button:disabled {
+            background: #999;
+        }
+
+        #status {
+            padding: 8px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .connected {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        #messages {
+            width: 100%;
+            height: 320px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            overflow-y: auto;
+            background: #f9f9f9;
+            font-family: monospace;
+            font-size: 13px;
+        }
+
+        .msg {
+            margin-bottom: 8px;
+            padding: 6px;
+            background: #fff;
+            border-left: 3px solid #007bff;
+            border-radius: 2px;
+        }
+
+        .msg .time {
+            color: #888;
+            font-size: 11px;
+        }
+
+        .msg .from {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .msg .to {
+            color: #6c757d;
+        }
+
+        code {
+            background: #eee;
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
-    <h1>🐾 PetMatch Chat - Test Client</h1>
 
-    <!-- Connection -->
-    <div class="section">
-        <h3>1. Conexión</h3>
-        <p>Endpoint: <code>ws://localhost:8092/chat</code></p>
-        <button id="btnConnect">Connect</button>
-        <button id="btnDisconnect" disabled>Disconnect</button>
-        <div id="status" class="disconnected">Desconectado</div>
+<h1>🐾 PetMatch Chat - Test Client</h1>
+
+<div class="section">
+    <h3>1. Conexión</h3>
+
+    <p>
+        Endpoint:
+        <code>wss://petmatch1-production.up.railway.app/chat</code>
+    </p>
+
+    <button id="btnConnect">Connect</button>
+    <button id="btnDisconnect" disabled>Disconnect</button>
+
+    <div id="status" class="disconnected">
+        Desconectado
+    </div>
+</div>
+
+<div class="section">
+    <h3>2. Suscripción</h3>
+
+    <p>
+        Topic:
+        <code>/topic/messages</code>
+    </p>
+
+    <button id="btnSubscribe" disabled>
+        Subscribe
+    </button>
+
+    <span id="subStatus"></span>
+</div>
+
+<div class="section">
+    <h3>3. Enviar Mensaje</h3>
+
+    <div style="margin-bottom:8px;">
+        <label>Sender:</label>
+        <input type="text" id="inputSender" placeholder="ej: Camilo">
     </div>
 
-    <!-- Subscribe -->
-    <div class="section">
-        <h3>2. Suscripción</h3>
-        <p>Topic: <code>/topic/messages</code></p>
-        <button id="btnSubscribe" disabled>Subscribe</button>
-        <span id="subStatus"></span>
+    <div style="margin-bottom:8px;">
+        <label>Receiver:</label>
+        <input type="text" id="inputReceiver" placeholder="ej: Juan">
     </div>
 
-    <!-- Send Message -->
-    <div class="section">
-        <h3>3. Enviar Mensaje</h3>
-        <div style="margin-bottom: 8px;">
-            <label>Sender:</label>
-            <input type="text" id="inputSender" placeholder="ej: usuario1">
-        </div>
-        <div style="margin-bottom: 8px;">
-            <label>Receiver:</label>
-            <input type="text" id="inputReceiver" placeholder="ej: usuario2">
-        </div>
-        <div style="margin-bottom: 8px;">
-            <label>Content:</label>
-            <input type="text" id="inputContent" placeholder="Escribe tu mensaje...">
-        </div>
-        <button id="btnSend" disabled>Send</button>
+    <div style="margin-bottom:8px;">
+        <label>Content:</label>
+        <input type="text" id="inputContent" placeholder="Escribe un mensaje">
     </div>
 
-    <!-- Messages -->
-    <div class="section">
-        <h3>4. Mensajes Recibidos</h3>
-        <div id="messages"></div>
-    </div>
+    <button id="btnSend" disabled>
+        Send
+    </button>
+</div>
 
-    <script>
-        let stompClient = null;
-        let subscription = null;
+<div class="section">
+    <h3>4. Mensajes Recibidos</h3>
 
-        const btnConnect = document.getElementById('btnConnect');
-        const btnDisconnect = document.getElementById('btnDisconnect');
-        const btnSubscribe = document.getElementById('btnSubscribe');
-        const btnSend = document.getElementById('btnSend');
-        const status = document.getElementById('status');
-        const subStatus = document.getElementById('subStatus');
-        const messagesDiv = document.getElementById('messages');
+    <div id="messages"></div>
+</div>
 
-        // Connect using native WebSocket (no SockJS fallback since server doesn't have .withSockJS())
-        btnConnect.addEventListener('click', function() {
-            const wsUrl = 'ws://localhost:8092/chat';
-            const socket = new WebSocket(wsUrl);
-            stompClient = Stomp.over(socket);
+<script>
 
-            // Disable debug logs (comment next line to see STOMP frames)
-            stompClient.debug = null;
+    let stompClient = null;
+    let subscription = null;
 
-            stompClient.connect({}, function(frame) {
-                status.textContent = 'Conectado ✓';
-                status.className = 'connected';
-                btnConnect.disabled = true;
-                btnDisconnect.disabled = false;
-                btnSubscribe.disabled = false;
-                btnSend.disabled = false;
-                appendLog('Sistema', '', 'Conectado al servidor WebSocket');
-            }, function(error) {
-                status.textContent = 'Error: ' + error;
+    const btnConnect = document.getElementById('btnConnect');
+    const btnDisconnect = document.getElementById('btnDisconnect');
+    const btnSubscribe = document.getElementById('btnSubscribe');
+    const btnSend = document.getElementById('btnSend');
+
+    const status = document.getElementById('status');
+    const subStatus = document.getElementById('subStatus');
+    const messagesDiv = document.getElementById('messages');
+
+    // CONNECT
+
+    btnConnect.addEventListener('click', function () {
+
+        const socket = new WebSocket(
+            'wss://petmatch1-production.up.railway.app/chat'
+        );
+
+        stompClient = Stomp.over(socket);
+
+        stompClient.debug = null;
+
+        stompClient.connect({}, function () {
+
+            status.textContent = 'Conectado ✓';
+            status.className = 'connected';
+
+            btnConnect.disabled = true;
+            btnDisconnect.disabled = false;
+            btnSubscribe.disabled = false;
+            btnSend.disabled = false;
+
+            appendLog('Conectado al servidor WebSocket');
+
+        }, function (error) {
+
+            status.textContent = 'Error de conexión';
+            status.className = 'disconnected';
+
+            appendLog('ERROR: ' + error);
+
+        });
+
+    });
+
+    // DISCONNECT
+
+    btnDisconnect.addEventListener('click', function () {
+
+        if (stompClient) {
+
+            stompClient.disconnect(function () {
+
+                status.textContent = 'Desconectado';
                 status.className = 'disconnected';
-                appendLog('Error', '', 'Fallo de conexión: ' + error);
-            });
-        });
 
-        // Disconnect
-        btnDisconnect.addEventListener('click', function() {
-            if (stompClient) {
-                stompClient.disconnect(function() {
-                    status.textContent = 'Desconectado';
-                    status.className = 'disconnected';
-                    btnConnect.disabled = false;
-                    btnDisconnect.disabled = true;
-                    btnSubscribe.disabled = true;
-                    btnSend.disabled = true;
-                    subStatus.textContent = '';
-                    subscription = null;
-                    appendLog('Sistema', '', 'Desconectado del servidor');
-                });
-            }
-        });
+                btnConnect.disabled = false;
+                btnDisconnect.disabled = true;
+                btnSubscribe.disabled = true;
+                btnSend.disabled = true;
 
-        // Subscribe to /topic/messages
-        btnSubscribe.addEventListener('click', function() {
-            if (!stompClient) return;
+                subStatus.textContent = '';
 
-            subscription = stompClient.subscribe('/topic/messages', function(message) {
-                const msg = JSON.parse(message.body);
-                appendMessage(msg);
+                appendLog('Desconectado del servidor');
+
             });
 
-            subStatus.textContent = ' ✓ Suscrito a /topic/messages';
-            subStatus.style.color = '#28a745';
-            btnSubscribe.disabled = true;
+        }
+
+    });
+
+    // SUBSCRIBE
+
+    btnSubscribe.addEventListener('click', function () {
+
+        subscription = stompClient.subscribe('/topic/messages', function (message) {
+
+            const msg = JSON.parse(message.body);
+
+            appendMessage(msg);
+
         });
 
-        // Send message
-        btnSend.addEventListener('click', function() {
-            const sender = document.getElementById('inputSender').value.trim();
-            const receiver = document.getElementById('inputReceiver').value.trim();
-            const content = document.getElementById('inputContent').value.trim();
+        subStatus.textContent = '✓ Suscrito a /topic/messages';
+        subStatus.style.color = '#28a745';
 
-            if (!sender || !receiver || !content) {
-                alert('Todos los campos son obligatorios');
-                return;
-            }
+        btnSubscribe.disabled = true;
 
-            const chatMessage = {
-                sender: sender,
-                receiver: receiver,
-                content: content
-            };
+    });
 
-            stompClient.send('/app/send', {}, JSON.stringify(chatMessage));
-            document.getElementById('inputContent').value = '';
-        });
+    // SEND MESSAGE
 
-        // Allow sending with Enter key
-        document.getElementById('inputContent').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !btnSend.disabled) {
+    btnSend.addEventListener('click', function () {
+
+        const sender = document.getElementById('inputSender').value.trim();
+        const receiver = document.getElementById('inputReceiver').value.trim();
+        const content = document.getElementById('inputContent').value.trim();
+
+        if (!sender || !receiver || !content) {
+
+            alert('Todos los campos son obligatorios');
+
+            return;
+        }
+
+        const message = {
+
+            sender: sender,
+            receiver: receiver,
+            content: content
+
+        };
+
+        stompClient.send(
+            '/app/send',
+            {},
+            JSON.stringify(message)
+        );
+
+        document.getElementById('inputContent').value = '';
+
+    });
+
+    // ENTER KEY
+
+    document.getElementById('inputContent')
+        .addEventListener('keypress', function (e) {
+
+            if (e.key === 'Enter') {
+
                 btnSend.click();
+
             }
+
         });
 
-        function appendMessage(msg) {
-            const div = document.createElement('div');
-            div.className = 'msg';
-            div.innerHTML = '<span class="time">[' + (msg.timestamp || 'sin timestamp') + ']</span> ' +
-                            '<span class="from">' + msg.sender + '</span> → ' +
-                            '<span class="to">' + msg.receiver + '</span>: ' +
-                            escapeHtml(msg.content);
-            messagesDiv.appendChild(div);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
+    // APPEND MESSAGE
 
-        function appendLog(from, to, text) {
-            const div = document.createElement('div');
-            div.className = 'msg';
-            div.style.borderLeftColor = '#6c757d';
-            div.innerHTML = '<span class="time">[' + new Date().toLocaleTimeString() + ']</span> ' +
-                            '<em>' + escapeHtml(text) + '</em>';
-            messagesDiv.appendChild(div);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
+    function appendMessage(msg) {
 
-        function escapeHtml(text) {
-            const d = document.createElement('div');
-            d.textContent = text;
-            return d.innerHTML;
-        }
-    </script>
+        const div = document.createElement('div');
+
+        div.className = 'msg';
+
+        div.innerHTML =
+            '<span class="time">[' +
+            (msg.timestamp || 'sin timestamp') +
+            ']</span> ' +
+
+            '<span class="from">' +
+            msg.sender +
+            '</span> → ' +
+
+            '<span class="to">' +
+            msg.receiver +
+            '</span>: ' +
+
+            escapeHtml(msg.content);
+
+        messagesDiv.appendChild(div);
+
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    }
+
+    // APPEND LOG
+
+    function appendLog(text) {
+
+        const div = document.createElement('div');
+
+        div.className = 'msg';
+
+        div.style.borderLeftColor = '#6c757d';
+
+        div.innerHTML =
+            '<span class="time">[' +
+            new Date().toLocaleTimeString() +
+            ']</span> ' +
+
+            '<em>' +
+            escapeHtml(text) +
+            '</em>';
+
+        messagesDiv.appendChild(div);
+
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    }
+
+    // ESCAPE HTML
+
+    function escapeHtml(text) {
+
+        const d = document.createElement('div');
+
+        d.textContent = text;
+
+        return d.innerHTML;
+
+    }
+
+</script>
+
 </body>
 </html>
