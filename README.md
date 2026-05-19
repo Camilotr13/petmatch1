@@ -3,7 +3,7 @@
 Backend oficial de PetMatch, una plataforma enfocada en conectar mascotas y personas mediante perfiles, chat en tiempo real e imágenes en la nube.
 
 * Tecnologías utilizadas
-* Java 21
+* Java 17
 * Spring Boot
 * MySQL
 *  WebSocket + STOMP
