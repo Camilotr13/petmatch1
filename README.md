@@ -100,6 +100,8 @@ Proyecto desplegado en:
 Railway
 MySQL Cloud
 Cloudinary
+
+
 👨‍💻 Equipo de desarrollo
 Backend Developer
 Camilo Torres
