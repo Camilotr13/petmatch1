@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>PetMatch Chat - Test Client</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 700px; margin: 40px auto; padding: 0 20px; }
+        h1 { color: #333; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+        label { display: inline-block; width: 80px; font-weight: bold; }
+        input[type="text"] { padding: 6px 10px; width: 200px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 16px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-size: 14px; }
+        #btnConnect { background: #28a745; }
+        #btnConnect:disabled { background: #999; }
+        #btnSubscribe { background: #007bff; }
+        #btnSubscribe:disabled { background: #999; }
+        #btnSend { background: #fd7e14; }
+        #btnSend:disabled { background: #999; }
+        #btnDisconnect { background: #dc3545; }
+        #status { padding: 8px; margin: 10px 0; border-radius: 4px; font-weight: bold; }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        #messages { width: 100%; height: 300px; border: 1px solid #ccc; border-radius: 4px; padding: 10px; overflow-y: auto; background: #f9f9f9; font-family: monospace; font-size: 13px; }
+        .msg { margin-bottom: 8px; padding: 6px; background: #fff; border-left: 3px solid #007bff; border-radius: 2px; }
+        .msg .time { color: #888; font-size: 11px; }
+        .msg .from { color: #28a745; font-weight: bold; }
+        .msg .to { color: #6c757d; }
+    </style>
+</head>
+<body>
+    <h1>🐾 PetMatch Chat - Test Client</h1>
+
+    <!-- Connection -->
+    <div class="section">
+        <h3>1. Conexión</h3>
+        <p>Endpoint: <code>ws://localhost:8092/chat</code></p>
+        <button id="btnConnect">Connect</button>
+        <button id="btnDisconnect" disabled>Disconnect</button>
+        <div id="status" class="disconnected">Desconectado</div>
+    </div>
+
+    <!-- Subscribe -->
+    <div class="section">
+        <h3>2. Suscripción</h3>
+        <p>Topic: <code>/topic/messages</code></p>
+        <button id="btnSubscribe" disabled>Subscribe</button>
+        <span id="subStatus"></span>
+    </div>
+
+    <!-- Send Message -->
+    <div class="section">
+        <h3>3. Enviar Mensaje</h3>
+        <div style="margin-bottom: 8px;">
+            <label>Sender:</label>
+            <input type="text" id="inputSender" placeholder="ej: usuario1">
+        </div>
+        <div style="margin-bottom: 8px;">
+            <label>Receiver:</label>
+            <input type="text" id="inputReceiver" placeholder="ej: usuario2">
+        </div>
+        <div style="margin-bottom: 8px;">
+            <label>Content:</label>
+            <input type="text" id="inputContent" placeholder="Escribe tu mensaje...">
+        </div>
+        <button id="btnSend" disabled>Send</button>
+    </div>
+
+    <!-- Messages -->
+    <div class="section">
+        <h3>4. Mensajes Recibidos</h3>
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let subscription = null;
+
+        const btnConnect = document.getElementById('btnConnect');
+        const btnDisconnect = document.getElementById('btnDisconnect');
+        const btnSubscribe = document.getElementById('btnSubscribe');
+        const btnSend = document.getElementById('btnSend');
+        const status = document.getElementById('status');
+        const subStatus = document.getElementById('subStatus');
+        const messagesDiv = document.getElementById('messages');
+
+        // Connect using native WebSocket (no SockJS fallback since server doesn't have .withSockJS())
+        btnConnect.addEventListener('click', function() {
+            const wsUrl = 'ws://localhost:8092/chat';
+            const socket = new WebSocket(wsUrl);
+            stompClient = Stomp.over(socket);
+
+            // Disable debug logs (comment next line to see STOMP frames)
+            stompClient.debug = null;
+
+            stompClient.connect({}, function(frame) {
+                status.textContent = 'Conectado ✓';
+                status.className = 'connected';
+                btnConnect.disabled = true;
+                btnDisconnect.disabled = false;
+                btnSubscribe.disabled = false;
+                btnSend.disabled = false;
+                appendLog('Sistema', '', 'Conectado al servidor WebSocket');
+            }, function(error) {
+                status.textContent = 'Error: ' + error;
+                status.className = 'disconnected';
+                appendLog('Error', '', 'Fallo de conexión: ' + error);
+            });
+        });
+
+        // Disconnect
+        btnDisconnect.addEventListener('click', function() {
+            if (stompClient) {
+                stompClient.disconnect(function() {
+                    status.textContent = 'Desconectado';
+                    status.className = 'disconnected';
+                    btnConnect.disabled = false;
+                    btnDisconnect.disabled = true;
+                    btnSubscribe.disabled = true;
+                    btnSend.disabled = true;
+                    subStatus.textContent = '';
+                    subscription = null;
+                    appendLog('Sistema', '', 'Desconectado del servidor');
+                });
+            }
+        });
+
+        // Subscribe to /topic/messages
+        btnSubscribe.addEventListener('click', function() {
+            if (!stompClient) return;
+
+            subscription = stompClient.subscribe('/topic/messages', function(message) {
+                const msg = JSON.parse(message.body);
+                appendMessage(msg);
+            });
+
+            subStatus.textContent = ' ✓ Suscrito a /topic/messages';
+            subStatus.style.color = '#28a745';
+            btnSubscribe.disabled = true;
+        });
+
+        // Send message
+        btnSend.addEventListener('click', function() {
+            const sender = document.getElementById('inputSender').value.trim();
+            const receiver = document.getElementById('inputReceiver').value.trim();
+            const content = document.getElementById('inputContent').value.trim();
+
+            if (!sender || !receiver || !content) {
+                alert('Todos los campos son obligatorios');
+                return;
+            }
+
+            const chatMessage = {
+                sender: sender,
+                receiver: receiver,
+                content: content
+            };
+
+            stompClient.send('/app/send', {}, JSON.stringify(chatMessage));
+            document.getElementById('inputContent').value = '';
+        });
+
+        // Allow sending with Enter key
+        document.getElementById('inputContent').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !btnSend.disabled) {
+                btnSend.click();
+            }
+        });
+
+        function appendMessage(msg) {
+            const div = document.createElement('div');
+            div.className = 'msg';
+            div.innerHTML = '<span class="time">[' + (msg.timestamp || 'sin timestamp') + ']</span> ' +
+                            '<span class="from">' + msg.sender + '</span> → ' +
+                            '<span class="to">' + msg.receiver + '</span>: ' +
+                            escapeHtml(msg.content);
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function appendLog(from, to, text) {
+            const div = document.createElement('div');
+            div.className = 'msg';
+            div.style.borderLeftColor = '#6c757d';
+            div.innerHTML = '<span class="time">[' + new Date().toLocaleTimeString() + ']</span> ' +
+                            '<em>' + escapeHtml(text) + '</em>';
+            messagesDiv.appendChild(div);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const d = document.createElement('div');
+            d.textContent = text;
+            return d.innerHTML;
+        }
+    </script>
+</body>
+</html>

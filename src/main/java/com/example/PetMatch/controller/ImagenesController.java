@@ -14,7 +14,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.PetMatch.model.dto.ImagenesDto;
 import com.example.PetMatch.model.entity.Imagenes;
@@ -108,6 +110,48 @@ public class ImagenesController {
                             .object(null)
                             .build(),
                     HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping("imagen/upload")
+    public ResponseEntity<?> upload(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "mascotaId", required = false) Long mascotaId) {
+        try {
+            Imagenes imagenSave = imagenesService.upload(file, mascotaId);
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje("Guardado Correctamente")
+                            .object(ImagenesDto.builder()
+                                    .id(imagenSave.getId())
+                                    .url(imagenSave.getUrl())
+                                    .mascotaId(imagenSave.getMascota() != null ? imagenSave.getMascota().getId() : null)
+                                    .build())
+                            .build(),
+                    HttpStatus.CREATED);
+        } catch (DataAccessException exDT) {
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje(exDT.getMessage())
+                            .object(null)
+                            .build(),
+                    HttpStatus.INTERNAL_SERVER_ERROR);
+        } catch (RuntimeException ex) {
+            String message = ex.getMessage();
+            HttpStatus status;
+            if (message.contains("obligatorio") || message.contains("imagen válida") || message.contains("5 MB")) {
+                status = HttpStatus.BAD_REQUEST;
+            } else if (message.contains("no existe")) {
+                status = HttpStatus.NOT_FOUND;
+            } else {
+                status = HttpStatus.INTERNAL_SERVER_ERROR;
+            }
+            return new ResponseEntity<>(
+                    MensajeResponse.builder()
+                            .mensaje(message)
+                            .object(null)
+                            .build(),
+                    status);
         }
     }
 
